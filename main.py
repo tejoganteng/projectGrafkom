@@ -1,3 +1,12 @@
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+import OpenGL.GLUT as glut
+from OpenGL.GLU import *
+from math import *    
+from random import randint
+
+
+#------------------------------text------------------------
 def drawText(ch,xpos,ypos,r,b,g):
     color = (r, b, g)
     font_style = glut.GLUT_BITMAP_8_BY_13
@@ -369,3 +378,246 @@ def background():
     glEnd()
 
     glPopMatrix()
+
+
+#----------------------------rock-----------------------------
+ammunition = 4
+rock1_speed = 0
+anchor_rock_x, anchor_rock_y = anchor_ketapel_x, 70
+on_animation = False
+last_pos_x = 0
+def rock1():
+    global on_animation,ammunition, rock1_speed, anchor_rock_x, anchor_rock_y
+    glPushMatrix()
+    if not on_animation:
+        glTranslate(anchor_rock_x,anchor_rock_y,0)  #fungsi translate sebelum nembak
+        anchor_rock_y += rock1_speed
+    else:
+        glTranslated(last_pos_x,anchor_rock_y,0)    #fungsi translate setelah nembak
+        anchor_rock_y += rock1_speed
+
+
+
+    if anchor_rock_y > 510: #jika sudah melewati window
+        # if ammunition
+        rock1_speed = 0
+        anchor_rock_y = 70
+        on_animation = False
+
+
+    glBegin(GL_POLYGON)
+    glColor3ub(100,0,100)
+    x = 10
+    y = 10
+    glVertex2f(-15.1845398351986,23.207060810307)
+    glVertex2f(14.4762602738399-x,22.5759799569231)
+    glVertex2f(18.8149411408535-x,0.8825756218549+y)
+    glVertex2f(-1-x,-10.0753563664078+3+y)
+    glVertex2f(-20.5,0+y)
+    glEnd()
+
+    glPopMatrix()
+
+
+
+#--------------------------game state------------------------------
+on_menu = True
+on_game = False
+on_pause = False
+def menu():
+    glBegin(GL_POLYGON)
+    glColor3ub(177, 217, 176)
+    glVertex2f(0,0)
+    glVertex2f(500,0)
+    glVertex2f(500,500)
+    glVertex2f(0,500)
+    glEnd()
+    drawTextBold("P L A Y",230,250)
+    drawText("Tekan T untuk mulai",200,230,0,0,0)
+
+temp={
+    'speed_burung1' : speed_burung1,
+    'speed_burung2' : speed_burung2,
+    'speed_burung3' : speed_burung3,
+    'speed_ketapel' : speed_ketapel,
+    'rock1_speed'   : rock1_speed
+}
+def pause():
+    global speed_burung1,speed_burung2,speed_burung3,speed_ketapel,on_pause,rock1_speed
+    
+    if on_pause:
+        speed_burung1 = 0
+        speed_burung2 = 0
+        speed_burung3 = 0 
+        speed_ketapel = 0
+    else:
+        speed_burung1 = -temp['speed_burung1']
+        speed_burung2 = -temp['speed_burung2']
+        speed_burung3 = -temp['speed_burung3']
+        speed_ketapel = temp['speed_ketapel']
+        rock1_speed = temp['rock1_speed']
+
+def gameover():
+    global ammunition, burung1_mati,burung2_mati,burung3_mati,on_animation,on_gameover
+
+    if (burung1_mati and burung2_mati and burung3_mati and not on_animation):
+        glBegin(GL_POLYGON)
+        glColor3ub(177, 217, 176)
+        glVertex2f(0,0)
+        glVertex2f(500,0)
+        glVertex2f(500,500)
+        glVertex2f(0,500)
+        glEnd()
+        drawText("Kamu Menang!",200,250,0,0,0)
+    elif (ammunition == 0 and not on_animation) :         
+        glBegin(GL_POLYGON)
+        glColor3ub(177, 217, 176)
+        glVertex2f(0,0)
+        glVertex2f(500,0)
+        glVertex2f(500,500)
+        glVertex2f(0,500)
+        glEnd()
+        drawText("Kamu Kalah!",200,250,0,0,0)
+    on_gameover = True
+#----------------------------game logic---------------------------------------
+def game():
+    global ammunition
+    global last_pos_x, anchor_rock_y
+    global anchor_burung1_x,anchor_burung1_y
+    global anchor_burung2_x,anchor_burung2_y
+    global anchor_burung3_x,anchor_burung3_y
+    global burung3_mati,burung2_mati,burung1_mati
+
+    x_burung_offset = -10
+    y_burung_offset = 40                #geser garis collision agar sesuai lebar objek
+    burung1_line_collision = [
+        [anchor_burung1_x-17+x_burung_offset,anchor_burung1_y+y_burung_offset],[anchor_burung1_x+17+x_burung_offset,anchor_burung1_y+y_burung_offset]]
+    burung2_line_collision = [
+        [anchor_burung2_x-17+x_burung_offset,anchor_burung2_y+y_burung_offset],[anchor_burung2_x+17+x_burung_offset,anchor_burung2_y+y_burung_offset]]
+    burung3_line_collision = [
+        [anchor_burung3_x-17+x_burung_offset,anchor_burung3_y+y_burung_offset],[anchor_burung3_x+17+x_burung_offset,anchor_rock_y+y_burung_offset]]
+    
+    rock_t1_kiri = [last_pos_x-17,anchor_rock_y+70]
+    rock_t2_kanan = [last_pos_x+17,anchor_rock_y+70]
+    x,y = 0,1
+
+    #-------------------------------collision-----------------------------------
+    if burung1_line_collision[0][y]<rock_t1_kiri[y]<burung1_line_collision[0][y]+20:   
+        if burung1_line_collision[0][x]< rock_t1_kiri[x] < burung1_line_collision[1][x]\
+        or burung1_line_collision[0][x]< rock_t2_kanan[x] < burung1_line_collision[1][x]:
+            burung1_mati = True   
+    
+    if burung2_line_collision[0][y]<rock_t1_kiri[y]<burung2_line_collision[0][y]+20:   #cek y
+        if burung2_line_collision[0][x]< rock_t1_kiri[x] < burung2_line_collision[1][x] or\
+        burung2_line_collision[0][x]< rock_t2_kanan[x] < burung2_line_collision[1][x]:
+            burung2_mati = True     
+    
+    if burung3_line_collision[0][y]<rock_t1_kiri[y]<burung3_line_collision[0][y]+20:   #cek y
+        if burung3_line_collision[0][x]< rock_t1_kiri[x] < burung3_line_collision[1][x] or\
+        burung3_line_collision[0][x]< rock_t2_kanan[x] < burung3_line_collision[1][x]:
+            burung3_mati = True    
+    #----------------------------draw asset---------------------------------------
+    #---background---
+    background()
+    tiang()
+    papan(0,200)
+    papan(0,300)
+    papan(0,400)
+    tiang(470)
+    #----------------
+    if not burung1_mati:
+        burung1()
+    if not burung2_mati:
+        burung2()
+    if not burung3_mati:
+        burung3()
+    ketapel()
+
+    if ammunition >= 0:
+        rock1()
+    
+    drawText(f'Rock Ammunition : {ammunition}',10,10,0,0,0)
+    drawText(f'P = Pause',400,10,0,0,0)
+
+    if on_pause:
+        drawTextBold(f'Game Paused!',200,250)
+
+
+        
+def iterate():
+    glViewport(0, 0, 500, 500)
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    glOrtho(0.0, 500, 0.0, 500, 0.0, 1.0)
+    glMatrixMode (GL_MODELVIEW)
+    glLoadIdentity()
+
+def showScreen():
+    global on_menu,on_game,on_pause
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glClearColor(255,255,255,1)
+    glLoadIdentity()
+    iterate()
+
+    if on_menu:
+        menu()
+    if on_game:
+        game()
+        gameover()
+    
+    glutSwapBuffers()
+
+
+#--------------------------Control------------------------------------
+def spesial_key(key,a,b):
+    global speed_ketapel,anchor_ketapel_x, anchor_rock_x
+    if key == GLUT_KEY_LEFT:
+        x_after_translated_ketapel = anchor_ketapel_x  - speed_ketapel  
+        print(x_after_translated_ketapel, '--', anchor_rock_x)
+
+        if x_after_translated_ketapel > 20:
+            anchor_ketapel_x -= speed_ketapel
+            anchor_rock_x -= speed_ketapel
+
+    if key == GLUT_KEY_RIGHT: 
+        x_after_translated_ketapel = anchor_ketapel_x + speed_ketapel 
+        print(x_after_translated_ketapel, '--', anchor_rock_x)
+        if x_after_translated_ketapel < 480:
+            anchor_ketapel_x += speed_ketapel 
+            anchor_rock_x += speed_ketapel
+
+def normal_key(key,a,b):
+    global rock1_speed,on_animation,last_pos_x, anchor_ketapel_x, ammunition
+    if key == b' ' and not on_animation:
+        
+        if ammunition > 0 :
+            rock1_speed =1
+            on_animation = True
+            last_pos_x = anchor_ketapel_x
+            ammunition -= 1
+            print(ammunition)
+            return True
+    #------------ State Controller -------------------------------------------
+    global on_game,on_menu,on_pause,on_gameover
+    if key == b't':
+        on_game = True
+        on_menu = False
+    
+    if key == b'p' and on_game:
+        on_pause = not on_pause
+        print(on_pause)
+        pause()
+
+glutInit()
+glutInitDisplayMode(GLUT_RGBA)
+glutInitWindowSize(500, 500)
+glutInitWindowPosition(450, 100)
+wind = glutCreateWindow("Precision Bullet")
+glutDisplayFunc(showScreen)
+glutIdleFunc(showScreen)
+glutKeyboardFunc(normal_key)
+glutSpecialFunc(spesial_key)
+glutMainLoop()
+
+            
+    
